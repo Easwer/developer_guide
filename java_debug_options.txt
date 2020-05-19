@@ -1,0 +1,11 @@
+---------------------------------------------------------------------------------------
+				JAVA Debug options
+---------------------------------------------------------------------------------------
+
+-agentlib:jdwp=transport=dt_socket,address=<PORT_NUMBER>,server=y,suspend=n
+
+suspend=n --> Opens the connection at port and starts the server or run the JAR.
+
+suspend=y --> Opens the connection and wait for the client to connect the port.
+	      Once the connection is established then only it will start the server or run the JAR.
+

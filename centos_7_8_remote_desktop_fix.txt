@@ -1,0 +1,3 @@
+gconftool-2 -s -t bool /desktop/gnome/remote_access/enabled true
+
+gconftool-2 -s -t bool /desktop/gnome/remote_access/prompt_enabled false

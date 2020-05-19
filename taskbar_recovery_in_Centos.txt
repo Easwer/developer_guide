@@ -1,0 +1,13 @@
+Open /home/easwer
+
+Show hidden files.
+
+Rename or move the following files to other location
+
+	1) .gconf
+	2) .gconfd
+	3) .gnome2
+	4) .gnome2_private
+	
+	
+	9488975096 -  Rajan

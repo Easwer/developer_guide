@@ -1,0 +1,1 @@
+git diff -w --no-ext-diff --no-prefix --staged

@@ -1,0 +1,188 @@
+----------------------------------------------------------------------------------------------------------------------
+Steps Link
+----------------------------------------------------------------------------------------------------------------------
+
+https://www.howtoforge.com/tutorial/how-to-install-and-configure-master-slave-replication-with-postgresql-96-on-centos-7
+
+----------------------------------------------------------------------------------------------------------------------
+To start PostgresSQL server
+----------------------------------------------------------------------------------------------------------------------
+
+su - postgres
+ pg_ctl -D /var/lib/postgres/data -l logfile start
+ 
+ ----------------------------------------------------------------------------------------------------------------------
+To stop PostgresSQL server
+----------------------------------------------------------------------------------------------------------------------
+
+su - postgres
+ pg_ctl -D /var/lib/postgres/data -l logfile stop
+
+----------------------------------------------------------------------------------------------------------------------
+To open PostgresSQL CLI
+----------------------------------------------------------------------------------------------------------------------
+su - username (default - postgres)
+
+
+----------------------------------------------------------------------------------------------------------------------
+Create new user
+----------------------------------------------------------------------------------------------------------------------
+createuser username --pwprompt --superuser --replication --createrole --createrole --createdb --connection-limit=111 --echo
+dropuser username
+
+
+----------------------------------------------------------------------------------------------------------------------
+Create new database
+----------------------------------------------------------------------------------------------------------------------
+createdb dbName --owner=easwer --password
+dropdb dbName
+
+
+----------------------------------------------------------------------------------------------------------------------
+Basic commands
+----------------------------------------------------------------------------------------------------------------------
+
+\? - Help
+
+\q - Exit
+
+SELECT current_database();
+
+\l or \list  - Show all databases
+
+\dt - Show all tables
+
+\du - Show all users in PostgresSQL
+
+\d <Table Name> - Describe table
+
+\x <on/off/auto> - Expanded display. Similar to \G in MySQL to get formatted output on SELECT query
+
+----------------------------------------------------------------------------------------------------------------------
+Configuring Replication Master
+----------------------------------------------------------------------------------------------------------------------
+
+1, In /var/lib/pgsql/10/data/postgresql.conf, Change the following:
+
+	listen_addresses = 'Master IP'
+
+	wal_level = hot_standby - pgsql 9.6
+	wal_level = replica - pgsql 10
+
+	synchronous_commit = local
+	
+	synchronous_standby_names = <any name> (Ex: sync_replication)
+
+	max_wal_senders = 2
+
+	wal_keep_segments = 10
+
+2, In /var/lib/pgsql/10/data/pg_hba.conf, Change the following:
+
+	# Localhost
+ 		host    replication     <user name>          127.0.0.1/32            md5
+ 	
+ 	# PostgreSQL Master IP address
+ 		host    replication     <user name>          <Master IP>/32            md5
+ 
+ 	# PostgreSQL SLave IP address
+ 		host    replication     <user name>          <Slave IP>/32            md5
+
+3, Restart the postgesql service to reflect the configuraion changes:
+
+	systemctl restart postgresql-10
+
+4, Login as the postgres user and create replication user:
+
+	su - postgres
+	createuser --replication -P <user name>
+
+
+----------------------------------------------------------------------------------------------------------------------
+Configuring Replication Slave
+----------------------------------------------------------------------------------------------------------------------
+
+1, Stop the postgesql service while configuring slave:
+
+	systemctl stop postgresql-10
+
+2, Take backup of "data" directory in pgqsl file:
+
+	mv /var/lib/pgsql/10/data /var/lib/pgsql/10/data-backup
+	
+3, Create new empty "data" directory with proper permissions:
+	
+	mkdir -p data/
+	chmod 700 data/
+	chown -R postgres:postgres data/
+
+4, Login as the postgres user and copy all data directory from the 'Master' server to the 'Slave' server as replica user.
+	
+	su - postgres
+	pg_basebackup -h <Master IP> -U <User Name> -D /var/lib/pgsql/10/data -P
+	
+5, In /var/lib/pgsql/10/data/postgresql.conf, Change the following:
+
+	listen_addresses = 'Slave IP'
+	
+	hot_standby = on
+	
+6, Create new 'recovery.conf' file in /var/lib/pgsql/10/data:
+
+	touch /var/lib/pgsql/10/data/recovery.conf
+	chmod 600 /var/lib/pgsql/10/data/recovery.conf
+	chown postgres:postgres /var/lib/pgsql/10/data/recovery.conf
+
+7, Paste the following configuration in /var/lib/pgsql/10/data/recovery.conf:
+
+	standby_mode = 'on'
+	primary_conninfo = 'host=<Master IP> port=5432 user=<User Name> password=<Password> application_name=<synchronous_standby_names in postgesql.conf of master>'
+	trigger_file = '<Trriger file>'
+	
+8, Start the postgesql service:
+
+	systemctl start postgresql-10
+
+
+----------------------------------------------------------------------------------------------------------------------
+Testing the replication
+----------------------------------------------------------------------------------------------------------------------
+
+1, Login into postgresql and run psql -c "select application_name, state, sync_priority, sync_state from pg_stat_replication;"
+
+	SAMPLE OUTPUT: If output has an value the replication is running.
+	------------------+-----------+---------------+---------------+------------	
+		 application_name 		   |     state    | sync_priority | sync_state 
+	------------------+-----------+---------------+---------------+------------
+	<synchronous_standby_names>| streaming |             1	| sync
+	------------------+-----------+---------------+---------------+------------
+	(1 row)
+	
+2, Login into postgresql and run psql -x -c "select * from pg_stat_replication;"
+
+	SAMPLE OUTPUT: If output has an value the replication is running and you can see the replication slvae status.
+
+	-[ RECORD 1 ]----+---------------------------------
+	pid              	    | 1111
+	usesysid         	    | 16385
+	usename              | root
+	application_name | easwer
+	client_addr           | 192.168.27.234
+	client_hostname  | 
+	client_port           | 35230
+	backend_start      | 2018-04-13 19:06:29.801668+05:30
+	backend_xmin      | 
+	state	             | streaming
+	sent_lsn               | 0/50001B0
+	write_lsn              | 0/50001B0
+	flush_lsn        	     | 0/50001B0
+	replay_lsn            | 0/50001B0
+	write_lag              | 00:00:00.000359
+	flush_lag              | 00:00:00.000359
+	replay_lag 	     | 00:00:00.000359
+	sync_priority         | 1
+	sync_state            | sync
+
+3, Create new table and insert some data into it and check whether it is reflected in slave node.
+
+4, Table write operations should be failed with reason "cannot execute INSERT in a read-only transaction".

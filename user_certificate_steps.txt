@@ -1,0 +1,59 @@
+Use the following commends to generate CA root certificates and some user certificate. For openssl.cnf file also checked-in in the same location.															   
+																	   
+Also CRL certificate creation and revoking certificates commands is available at the end of this document.
+
+Use the below references for more info.
+
+	https://jamielinux.com/docs/openssl-certificate-authority/create-the-root-pair.html
+	https://jamielinux.com/docs/openssl-certificate-authority/create-the-intermediate-pair.html
+	https://jamielinux.com/docs/openssl-certificate-authority/sign-server-and-client-certificates.html
+	https://jamielinux.com/docs/openssl-certificate-authority/certificate-revocation-lists.html
+
+
+============================================================================================================================
+					To Generate User Certificate
+============================================================================================================================
+
+
+mkdir certs crl newcerts private
+chmod 700 private
+touch index.txt
+echo 1000 > serial
+openssl genrsa -aes256 -out private/ca.key.pem 4096
+chmod 400 private/ca.key.pem
+openssl req -config openssl.cnf -key private/ca.key.pem -new -x509 -days 7300 -sha256 -extensions v3_ca -out certs/ca.cert.pem
+chmod 444 certs/ca.cert.pem
+mkdir user1
+cd user1
+mkdir certs crl newcerts private
+cd ..
+openssl genrsa -aes256 -out user1/private/user1.key.pem 2048
+chmod 400 user1/private/user1.key.pem
+mkdir user1/csr
+openssl req -config openssl.cnf -key user1/private/user1.key.pem -new -sha256 -out user1/csr/user1.csr.pem
+openssl ca -config openssl.cnf    -extensions usr_cert -days 375 -notext -md sha256 -in user1/csr/user1.csr.pem -out user1/certs/user1.cert.pem
+openssl pkcs12 -export -out user1.pfx -inkey user1/private/user1.crt -in user1/certs/user1.crt
+mkdir user2
+cd user2
+mkdir certs crl newcerts private
+cd ..
+openssl genrsa -aes256 -out user2/private/user2.key.pem 2048
+chmod 400 user2/private/user2.key.pem
+mkdir user2/csr
+openssl req -config openssl.cnf -key user2/private/user2.key.pem -new -sha256 -out user2/csr/user2.csr.pem
+openssl ca -config openssl.cnf    -extensions usr_cert -days 375 -notext -md sha256 -in user2/csr/user2.csr.pem -out user2/certs/user2.cert.pem
+openssl pkcs12 -export -out user2.pfx -inkey user2/private/user2.crt -in user2/certs/user1.crt
+
+
+
+============================================================================================================================
+						To Generate CRL Certificate
+============================================================================================================================
+
+ echo 1000 > crlnumber
+ mkdir crl;
+ openssl ca -config openssl.cnf -revoke user1/certs/user1.cert.pem
+ openssl ca -config openssl.cnf -gencrl -out  crl/ca.crl.pem
+ openssl crl -in crl/ca.crl.pem -noout -text
+ 
+ 

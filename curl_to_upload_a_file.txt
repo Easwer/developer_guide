@@ -1,0 +1,10 @@
+---------------------------------------------------------------
+	CURL to upload file with basic authentication
+---------------------------------------------------------------
+
+curl -k -i 
+	-u <USERNAME>:<PASSWORD>
+	-H "Content-Type: multipart/form-data"
+	-H "Accept: <ACCEPT_TYPE>"
+	--form "upload=@<FILE_PATH>"
+	https://<IP_OR_HOSTNAME>/<REST_URL>
